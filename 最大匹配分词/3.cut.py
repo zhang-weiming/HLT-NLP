@@ -4,9 +4,7 @@ import codecs
 def forward_maximum_matching(sentences, word_dict, max_word_len=3):
     for i, item in enumerate(sentences):
         item = item.strip()
-        s = 0
-        e = min(s + max_word_len, len(item))
-        tmp = []
+        s, e, tmp = 0, min(max_word_len, len(item)), []
         while s < len(item):
             if item[s:e] in word_dict or s + 1 == e:
                 tmp.append(item[s:e])
@@ -23,14 +21,12 @@ def forward_maximum_matching(sentences, word_dict, max_word_len=3):
 def backward_maximum_matching(sentences, word_dict, max_word_len=3):
     for i, item in enumerate(sentences):
         item = item.strip()
-        s = max(len(item)-max_word_len, 0)
-        e = len(item)
-        tmp = []
+        s, e, tmp = max(len(item)-max_word_len, 0), len(item), []
         while s >= 0:
             if item[s:e] in word_dict or s + 1 == e:
                 tmp.append(item[s:e])
                 e = s
-                s = max(e-max_word_len, 0) if s != 0 else -1
+                s = max(e - max_word_len, 0) if s != 0 else -1
             else:
                 s += 1
         tmp.reverse()
@@ -45,10 +41,7 @@ def main(sourcefile="data/data.txt", dictfile="data/word.dict", outfile="data/da
         sentences = fr.readlines()
 
     with codecs.open(dictfile, "r", "utf-8") as fr:
-        word_dict = fr.readlines()
-    for i, item in enumerate(word_dict):
-        word_dict[i] = item.strip()
-
+        word_dict = [item.strip() for item in fr.readlines()]
     # sentences = forward_maximum_matching(sentences, word_dict, max_word_len=10)
     sentences = backward_maximum_matching(sentences, word_dict, max_word_len=10)
 

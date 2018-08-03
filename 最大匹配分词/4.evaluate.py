@@ -8,8 +8,7 @@ def main(datafile="data/data.conll", outfile="data/data.out"):
         lines, out = fr.readlines(), []
         for item in lines:
             out.extend(item.strip().split(" "))
-    print(data)
-    print(out)
+    print(data, "\n", out)
     len_data, len_out = len(data), len(out)
 
     tp, i, j = 0, 0, 0

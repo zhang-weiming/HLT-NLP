@@ -15,16 +15,13 @@ def main(sourcefile="data/data.conll", dictfile="data/data.txt"):
         data.pop(index=-1)
 
     with codecs.open(dictfile, "w", "utf-8") as fw:
-        tmp = ""
-        c = 0
+        tmp, c = "", 0
         for line in data:
             if line.strip() == "":
                 fw.write("%s\n" % tmp)
-                c += 1
-                tmp = ""
+                tmp, c = "", c + 1
             else:
                 tmp += line.strip().split("\t")[1]
-
     print("We have %d docs in the file saved as '%s'." % (c, dictfile))
 
 

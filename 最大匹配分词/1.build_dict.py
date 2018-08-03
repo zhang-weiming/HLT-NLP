@@ -10,17 +10,17 @@ def main(sourcefile="data/data.conll", dictfile="data/word.dict"):
     """
     with codecs.open(sourcefile, "r", "utf-8") as fr:
         data = fr.readlines()
-    dict = set()
+    words = set()
     for line in data:
         if line.strip() != "":
             word = line.strip().split("\t")[1]
             if len(word) > 1:
-                dict.add(word)
+                words.add(word)
 
     with codecs.open(dictfile, "w", "utf-8") as fw:
-        for word in dict:
+        for word in words:
             fw.write("%s\n" % word)
-    print("We have %d words in the dict file saved as '%s'." % (len(dict), dictfile))
+    print("We have %d words in the dict file saved as '%s'." % (len(words), dictfile))
 
 
 if __name__ == "__main__":
