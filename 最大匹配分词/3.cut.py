@@ -20,6 +20,26 @@ def forward_maximum_matching(sentences, word_dict, max_word_len=3):
     return sentences
 
 
+def backward_maximum_matching(sentences, word_dict, max_word_len=3):
+    for i, item in enumerate(sentences):
+        item = item.strip()
+        s = max(len(item)-max_word_len, 0)
+        e = len(item)
+        tmp = []
+        while s >= 0:
+            if item[s:e] in word_dict or s + 1 == e:
+                tmp.append(item[s:e])
+                e = s
+                s = max(e-max_word_len, 0) if s != 0 else -1
+            else:
+                s += 1
+        tmp.reverse()
+        sentences[i] = " ".join(tmp)
+        print("\r%d / %d" % (i+1, len(sentences)), end="")
+    print()
+    return sentences
+
+
 def main(sourcefile="data/data.txt", dictfile="data/word.dict", outfile="data/data.out"):
     with codecs.open(sourcefile, "r", "utf-8") as fr:
         sentences = fr.readlines()
@@ -29,7 +49,8 @@ def main(sourcefile="data/data.txt", dictfile="data/word.dict", outfile="data/da
     for i, item in enumerate(word_dict):
         word_dict[i] = item.strip()
 
-    sentences = forward_maximum_matching(sentences, word_dict, max_word_len=10)
+    # sentences = forward_maximum_matching(sentences, word_dict, max_word_len=10)
+    sentences = backward_maximum_matching(sentences, word_dict, max_word_len=10)
 
     with codecs.open(outfile, "w", "utf-8") as fw:
         for item in sentences:
