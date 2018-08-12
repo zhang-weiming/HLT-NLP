@@ -1,114 +1,179 @@
 """
 条件概率P(ti|ti-1)叫作隐状态之间的 转移概率 。
 条件概率P(wi|ti)叫作隐状态到显状态的 发射概率 ，也叫作隐状态生成显状态的概率。
+
+Alpha   Acc
+0.2     0.7381
+0.1     0.7589
+0.05    0.773525
+0.01    0.788609
+0.005   0.790238
 """
 import codecs
 import pickle
 import sys
+import numpy as np
 
 
-Alpha = 0.3
+Alpha = 0.005
 
 
-def count(tag, tags):
-    c = 0
-    for t in tags:
-        c += t.count(tag)
-    return c
+class Binary_HMM():
+    def __init__(self):
+        self.train_data = None
 
+        self.launch_matrix = None
+        self.transition_matrix = None
+        self.wordbank = dict()
+        self.tagbank = dict()
 
-def hmm(words_with_tag, tags, V, S):
-    Q, E, count_tag, len_V = dict(), dict(), dict( (("*", len(tags)),) ), len(V)
-    for tag in S:
-        if tag not in count_tag:
-            count_tag[tag] = count(tag, tags)
-        a, b = count("* " + tag, tags) + Alpha, count_tag["*"] + Alpha * len_V
-        Q[tag + "|*"] = a / b
-        a, b = count(tag + " STOP", tags) + Alpha, count_tag[tag] + Alpha * len_V
-        Q["STOP|" + tag] = a / b
+    def load_train_set(self, filename):
+        with codecs.open(filename, "r", "utf-8") as fr:
+            data = fr.readlines()
 
-        for prefix in S:
-            if prefix not in count_tag:
-                count_tag[prefix] = count(prefix, tags)
-            a = count(prefix + " " + tag, tags) + Alpha
-            b = count_tag[prefix] + Alpha * len_V
-            Q["%s|%s" % (tag, prefix)] = a / b
-    for word in V:
-        for tag in S:
-            a = words_with_tag.count("%s %s" % (word, tag)) + Alpha
-            b = count_tag[tag] + Alpha * len_V
-            E["%s|%s" % (word, tag)] = a / b
-
-    return Q, E
-
-
-def train():
-    """
-    words_with_tag：
-        维度：1 x n
-        含义：所有出现过的词，与其词性的组合，不去重。组合形式如：“戴相龙|NR”。
-    tags：
-        维度：n x m
-        含义：将每条句子中词的词性按出现顺序连接，用空格作连接符。每个词条的句首和句尾分别添加“*”、“STOP”
-    :return:
-    """
-    print("train...", end="")
-    sys.stdout.flush()
-    with codecs.open("data/train.conll", "r", "utf-8") as fr:
-        data = fr.readlines()
-        words_with_tag, tags, V, S, tags_tmp = [], [], set(), set(), "*"
+        self.train_data, tmp, words, tags = [], [], set(), set()
         for line in data:
             if line.strip() == "":
-                tags.append(tags_tmp + " STOP")
-                tags_tmp = "*"
+                self.train_data.append(tmp)
+                tmp = []
             else:
                 s = line.split("\t")
-                words_with_tag.append("%s|%s" % (s[1], s[3]))
-                V.add(s[1])
-                S.add(s[3])
-                tags_tmp += " " + s[3]
+                tmp.append((s[1], s[3]))
+                words.add(s[1])
+                tags.add(s[3])
+        i = 0
+        for word in words:
+            self.wordbank[word] = i
+            i += 1
+        i = 0
+        for tag in tags:
+            self.tagbank[tag] = i
+            i += 1
+        self.tagbank["*"] = len(self.tagbank)
+        self.tagbank["STOP"] = len(self.tagbank)
 
-    Q, E = hmm(words_with_tag, tags, V, S)
+    def train(self):
+        self.launch_matrix = np.zeros((len(self.wordbank), len(self.tagbank)))
+        for sent in self.train_data:
+            for word, tag in sent:
+                self.launch_matrix[self.wordbank[word]][self.tagbank[tag]] += 1
+        for i in range(len(self.launch_matrix)):
+            s = sum(self.launch_matrix[i])
+            for j in range(len(self.launch_matrix[i])):
+                self.launch_matrix[i][j] = (self.launch_matrix[i][j] + Alpha) / (s + Alpha * (len(self.wordbank)))
 
-    with codecs.open("data/model.bin", "wb") as fw:
-        pickle.dump(Q, fw)
-        pickle.dump(E, fw)
-    print("done")
-    return Q, E
+        self.transition_matrix = np.zeros((len(self.tagbank), len(self.tagbank)))
+        for sent in self.train_data:
+            for i in range(len(sent) + 1):
+                if i == 0:
+                    self.transition_matrix[self.tagbank[sent[i][1]]][self.tagbank["*"]] += 1
+                elif i == len(sent):
+                    self.transition_matrix[self.tagbank["STOP"]][self.tagbank[sent[i-1][1]]] += 1
+                else:
+                    self.transition_matrix[self.tagbank[sent[i][1]]][self.tagbank[sent[i-1][1]]] += 1
+        for i in range(len(self.transition_matrix)):
+            s = sum(self.transition_matrix[i])
+            for j in range(len(self.transition_matrix[i])):
+                self.transition_matrix[i][j] = (self.transition_matrix[i][j] + Alpha) / (
+                        s + Alpha * (len(self.tagbank) - 1))
 
+    def viterbi(self, words):
+        n = len(words)
+        Y, PI, BP = ["" for i in range(n+1)], [dict() for i in range(n+1)], [dict() for i in range(n+1)]
+        PI[0]["*"] = 1
+        words.insert(0, "")
 
-def load_model():
-    with codecs.open("data/model.bin", "rb") as fr:
-        Q = pickle.load(fr)
-        E = pickle.load(fr)
-    return Q, E
+        for k in range(1, n+1):
+            for v in self.tagbank:
+                maxv, max_tag, e = 0.0, "", self.launch_matrix[self.wordbank[words[k]]][self.tagbank[v]] if words[k] in self.wordbank else 1
+                if k == 1:
+                    for u in ("*"):
+                        tmp = PI[k-1][u] * self.transition_matrix[self.tagbank[v]][self.tagbank[u]] * e
+                        if tmp > maxv:
+                            maxv = tmp
+                            max_tag = u
+                    PI[k][v] = maxv
+                    BP[k][v] = max_tag
+                else:
+                    for u in self.tagbank:
+                        tmp = PI[k-1][u] * self.transition_matrix[self.tagbank[v]][self.tagbank[u]] * e
+                        if tmp > maxv:
+                            maxv = tmp
+                            max_tag = u
+                    PI[k][v] = maxv
+                    BP[k][v] = max_tag
 
+        maxv, max_tag = 0.0, ""
+        for v in self.tagbank:
+            tmp = PI[n][v] * self.transition_matrix[self.tagbank["STOP"]][self.tagbank[v]]
+            if tmp > maxv:
+                maxv = tmp
+                max_tag = v
+        Y[n] = max_tag
+        for k in range(n-1, 0, -1):
+            Y[k] = BP[k+1][Y[n]]
+        return Y[1:]
 
-def main():
-    Q, E = train()
-    # Q, E = load_model()
-    P = []
-    with codecs.open("data/train.conll", "r", "utf-8") as fr:
-        data = fr.readlines()
-        words_with_tag_tmp, tags_tmp = [], ["*"]
+    def save_model(self):
+        with codecs.open("data/model.bin", "wb") as fw:
+            pickle.dump(self.launch_matrix, fw)
+            pickle.dump(self.transition_matrix, fw)
+            pickle.dump(self.wordbank, fw)
+            pickle.dump(self.tagbank, fw)
+
+    def evaluate(self):
+        with codecs.open("data/dev.conll", "r", "utf-8") as fr:
+            data = fr.readlines()
+
+        words, tags, p, n = [], [], 0, 0
+        for line in data:
+            if line.strip() == "":
+                pred = self.viterbi(words)
+                for i in range(len(tags)):
+                    if tags[i] == pred[i]:
+                        p += 1
+                    else:
+                        n += 1
+                words, tags = [], []
+            else:
+                s = line.split("\t")
+                words.append(s[1])
+                tags.append(s[3])
+
+        print("p: %d, n: %d" % (p, n))
+        print("Acc: %f" % (p / (p + n)))
+
+    def test(self):
+        with codecs.open("data/train.conll", "r", "utf-8") as fr:
+            data = fr.readlines()
+
+        tmp, words, tags = [], set(), set()
         for line in data:
             if line.strip() == "":
                 p = 1
-                tags_tmp.append("STOP")
-                for i in range(len(tags_tmp)-1):
-                    p *= Q["%s|%s" % (tags_tmp[i+1], tags_tmp[i])]
-                for word_with_tag in words_with_tag_tmp:
-                    p *= E[word_with_tag]
-                print(p, " ".join(words_with_tag_tmp))
-                P.append(p)
-                words_with_tag_tmp, tags_tmp = [], ["*"]
+                for word, tag in tmp:
+                    p *= self.launch_matrix[self.wordbank[word]][self.tagbank[tag]]
+                for i in range(len(tmp) + 1):
+                    if i == 0:
+                        p *= self.transition_matrix[self.tagbank[tmp[i][1]]][self.tagbank["*"]]
+                    elif i == len(tmp):
+                        p *= self.transition_matrix[self.tagbank["STOP"]][self.tagbank[tmp[i-1][1]]]
+                    else:
+                        p *= self.transition_matrix[self.tagbank[tmp[i][1]]][self.tagbank[tmp[i-1][1]]]
+                print(p, tmp)
+                tmp = []
             else:
                 s = line.split("\t")
-                words_with_tag_tmp.append("%s|%s" % (s[1], s[3]))
-                tags_tmp.append(s[3])
-    average = sum(P) / len(P)
-    var = sum([(x - average)**2 for x in P]) / len(P)
-    print(average, var)
+                tmp.append((s[1], s[3]))
+                words.add(s[1])
+                tags.add(s[3])
+
+
+def main():
+    hmm = Binary_HMM()
+    hmm.load_train_set("data/train.conll")
+    hmm.train()
+    hmm.evaluate()
 
 
 if __name__ == "__main__":
