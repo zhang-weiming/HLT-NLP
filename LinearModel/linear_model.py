@@ -122,9 +122,6 @@ class LinearModel(object):
                         for ii in f:
                             self.w[self.tags[sent[i][1]]][ii] += 1
                             self.w[self.tags[t]][ii] -= 1
-                            # self.v[tag][ii] += self.w[tag][ii]
-                            # self.v[t][ii] += self.w[t][ii]
-            # print(sum(self.w[self.tags["NN"]]))
             # 评价一次
             print(self.evaluate())
         t2 = time.time()
@@ -151,8 +148,16 @@ class LinearModel(object):
                     n += 1
         return p / (p+n)
 
+    def save_model(self, filename):
+        with codecs.open(filename, "w", "utf-8") as fw:
+            for tag in self.tags:
+                for feature in self.features:
+                    s = feature.split(" ")
+                    fw.write("%s %s %s\t%d\n" % (s[0], tag, s[1:], self.w[self.tags[tag]][self.features[feature]]))
+
 
 if __name__ == "__main__":
     pass
     linear_model = LinearModel("data/train.conll")
     linear_model.train()
+    linear_model.save_model("data/linear_model.txt")
