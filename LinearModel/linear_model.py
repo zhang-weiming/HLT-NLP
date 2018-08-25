@@ -52,22 +52,34 @@ class LinearModel(object):
 
     def get_f(self, sent, i):
         f = []
-        f.append(self.features["02: %s" % sent[i][0]])
-        f.append(self.features["03: %s" % sent[i-1][0]])
-        f.append(self.features["04: %s" % sent[i+1][0]])
-        f.append(self.features["05: %s %s" % (sent[i][0], sent[i-1][0][-1])])
-        f.append(self.features["06: %s %s" % (sent[i][0], sent[i+1][0][0])])
-        f.append(self.features["07: %s" % sent[i][0][0]])
-        f.append(self.features["08: %s" % sent[i][0][-1]])
-        f.append(self.features["09: %s" % sent[i][0][0:-2]])
-        f.append(self.features["10: %s %s" % (sent[i][0][0], sent[i][0][0:-2])])
-        f.append(self.features["11: %s %s" % (sent[i][0][-1], sent[i][0][0:-2])])
-        if len(sent[i][0]) == 1:
+        if "02: %s" % sent[i][0] in self.features:
+            f.append(self.features["02: %s" % sent[i][0]])
+        if "03: %s" % sent[i-1][0] in self.features:
+            f.append(self.features["03: %s" % sent[i-1][0]])
+        if "04: %s" % sent[i+1][0] in self.features:
+            f.append(self.features["04: %s" % sent[i+1][0]])
+        if "05: %s %s" % (sent[i][0], sent[i-1][0][-1]) in self.features:
+            f.append(self.features["05: %s %s" % (sent[i][0], sent[i-1][0][-1])])
+        if "06: %s %s" % (sent[i][0], sent[i+1][0][0]) in self.features:
+            f.append(self.features["06: %s %s" % (sent[i][0], sent[i+1][0][0])])
+        if "07: %s" % sent[i][0][0] in self.features:
+            f.append(self.features["07: %s" % sent[i][0][0]])
+        if "08: %s" % sent[i][0][-1] in self.features:
+            f.append(self.features["08: %s" % sent[i][0][-1]])
+        if "09: %s" % sent[i][0][0:-2] in self.features:
+            f.append(self.features["09: %s" % sent[i][0][0:-2]])
+        if "10: %s %s" % (sent[i][0][0], sent[i][0][0:-2]) in self.features:
+            f.append(self.features["10: %s %s" % (sent[i][0][0], sent[i][0][0:-2])])
+        if "11: %s %s" % (sent[i][0][-1], sent[i][0][0:-2]) in self.features:
+            f.append(self.features["11: %s %s" % (sent[i][0][-1], sent[i][0][0:-2])])
+        if len(sent[i][0]) == 1 and "12: %s %s %s" % (sent[i][0], sent[i-1][0][-1],sent[i+1][0][0]) in self.features:
             f.append(self.features["12: %s %s %s" % (sent[i][0], sent[i-1][0][-1],sent[i+1][0][0])])
-        if sent[i][0][0:-2] == sent[i][0][1:-1]:
+        if sent[i][0][0:-2] == sent[i][0][1:-1] and "13: %s consecutive" % sent[i][0][0:-2] in self.features:
             f.append(self.features["13: %s consecutive" % sent[i][0][0:-2]])
-        f.append(self.features["14: %s" % sent[i][0][0:4]])
-        f.append(self.features["15: %s" % sent[i][0][len(sent[i][0])-4:len(sent[i][0])]])
+        if "14: %s" % sent[i][0][0:4] in self.features:
+            f.append(self.features["14: %s" % sent[i][0][0:4]])
+        if "15: %s" % sent[i][0][len(sent[i][0])-4:len(sent[i][0])] in self.features:
+            f.append(self.features["15: %s" % sent[i][0][len(sent[i][0])-4:len(sent[i][0])]])
         return f
 
     def get_argmax(self, sent, i):
@@ -93,7 +105,7 @@ class LinearModel(object):
                             self.w[self.tags[t]][ii] -= 1
                             # self.v[tag][ii] += self.w[tag][ii]
                             # self.v[t][ii] += self.w[t][ii]
-            print(sum(self.w[self.tags["NN"]]))
+            # print(sum(self.w[self.tags["NN"]]))
             # 评价一次
             print(self.evaluate())
 
@@ -116,12 +128,6 @@ class LinearModel(object):
                     p += 1
                 else:
                     n += 1
-        # for sent in self.train_data:
-        #     for i in range(1, len(sent) - 1):
-        #         if sent[i][1] == self.get_argmax(sent, i)[0]:
-        #             p += 1
-        #         else:
-        #             n += 1
         return p / (p+n)
 
 
