@@ -1,5 +1,16 @@
 """
-
+train data: 21257
+19600
+0.7205536046271431
+19700
+0.8413137781450114
+19600
+0.8488741995455484
+19700
+0.856372650278868
+19600
+0.8535839702540797
+time cost: 466.3096263408661
 """
 import codecs
 import numpy as np
@@ -138,8 +149,9 @@ class LoglinearModel(object):
                     if b == B:
                         self.w += g
                         b, g = 0, np.zeros(self.w.shape)
-                        print(B * c)
+                        print("\r%d" % (B * c), end="")
                         c += 1
+            print()
             # 评价一次
             print(self.evaluate())
         t2 = time.time()
@@ -177,5 +189,6 @@ class LoglinearModel(object):
 if __name__ == "__main__":
     pass
     loglinear_model = LoglinearModel("data/train.conll")
+    # print(len(loglinear_model.features))
     loglinear_model.train()
     loglinear_model.save_model("data/linear_model.txt")
